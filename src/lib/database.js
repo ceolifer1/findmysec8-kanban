@@ -74,12 +74,27 @@ export async function updateProfile(userId, updates) {
 
 /* ─────────────────  BOARDS  ───────────────── */
 export async function getBoards(userId) {
-  const { data, error } = await supabase
+  // Step 1: Get board memberships
+  const { data: memberships, error: memErr } = await supabase
     .from("board_members")
-    .select("board_id, role, boards(id, name, description, emoji, created_at, owner_id)")
+    .select("board_id, role")
     .eq("user_id", userId);
-  if (error) throw error;
-  return data.map((bm) => ({ ...bm.boards, memberRole: bm.role }));
+  if (memErr) throw memErr;
+  if (!memberships || memberships.length === 0) return [];
+
+  // Step 2: Fetch the actual boards
+  const boardIds = memberships.map((m) => m.board_id);
+  const { data: boards, error: boardErr } = await supabase
+    .from("boards")
+    .select("id, name, description, emoji, created_at, owner_id")
+    .in("id", boardIds);
+  if (boardErr) throw boardErr;
+
+  // Step 3: Merge
+  const boardMap = Object.fromEntries((boards || []).map((b) => [b.id, b]));
+  return memberships
+    .filter((m) => boardMap[m.board_id])
+    .map((m) => ({ ...boardMap[m.board_id], memberRole: m.role }));
 }
 
 export async function createBoard(name, description, emoji, ownerId) {

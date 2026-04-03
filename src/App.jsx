@@ -72,18 +72,19 @@ export default function App() {
 
   const loadUserData = async (user) => {
     try {
-      const [prof, bds] = await Promise.all([
-        getProfile(user.id),
-        getBoards(user.id),
-      ]);
+      const prof = await getProfile(user.id);
       setProfile(prof);
+    } catch (err) {
+      console.error("Failed to load profile:", err);
+    }
+    try {
+      const bds = await getBoards(user.id);
       setBoards(bds);
-
       await acceptInvitesForEmail(user.email, user.id);
       const updatedBoards = await getBoards(user.id);
       setBoards(updatedBoards);
     } catch (err) {
-      console.error("Failed to load user data:", err);
+      console.error("Failed to load boards:", err);
     }
     setLoading(false);
   };
