@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createBoard } from "../lib/database";
+import { createBoard, createColumn } from "../lib/database";
 import { DEFAULT_COLUMNS } from "../lib/constants";
 
 export default function BoardSelector({ boards, userId, onSelect, onRefresh, onLogout, onManageUsers, profile }) {
@@ -14,7 +14,12 @@ export default function BoardSelector({ boards, userId, onSelect, onRefresh, onL
     if (!name.trim()) return;
     setLoading(true);
     try {
-      await createBoard(name.trim(), desc.trim(), emoji, userId);
+      const board = await createBoard(name.trim(), desc.trim(), emoji, userId);
+      // Create template columns
+      const cols = DEFAULT_COLUMNS[template] || DEFAULT_COLUMNS.general;
+      for (const col of cols) {
+        await createColumn(board.id, col.name, col.emoji, col.position);
+      }
       setCreating(false);
       setName("");
       setDesc("");
