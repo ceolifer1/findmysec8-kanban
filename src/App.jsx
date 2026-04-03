@@ -4,6 +4,7 @@ import { getProfile, getBoards, signOut, acceptInvitesForEmail } from "./lib/dat
 import AuthPage from "./components/AuthPage";
 import BoardSelector from "./components/BoardSelector";
 import KanbanBoard from "./components/KanbanBoard";
+import UserManagement from "./components/UserManagement";
 
 const GLOBAL_CSS = `
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Playfair+Display:wght@400;600;700&display=swap');
@@ -45,6 +46,7 @@ export default function App() {
   const [profile, setProfile] = useState(null);
   const [boards, setBoards] = useState([]);
   const [activeBoard, setActiveBoard] = useState(null);
+  const [view, setView] = useState("boards"); // boards | users
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -125,6 +127,11 @@ export default function App() {
       <style>{GLOBAL_CSS}</style>
       {!session ? (
         <AuthPage onAuth={() => {}} />
+      ) : view === "users" && (profile?.role === "superadmin" || profile?.role === "admin") ? (
+        <UserManagement
+          profile={profile}
+          onBack={() => setView("boards")}
+        />
       ) : activeBoard ? (
         <KanbanBoard
           board={activeBoard}
@@ -140,6 +147,7 @@ export default function App() {
           onSelect={setActiveBoard}
           onRefresh={refreshBoards}
           onLogout={handleLogout}
+          onManageUsers={(profile?.role === "superadmin" || profile?.role === "admin") ? () => setView("users") : null}
         />
       )}
     </>

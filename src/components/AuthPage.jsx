@@ -1,35 +1,20 @@
 import { useState } from "react";
-import { signIn, signUp } from "../lib/database";
+import { signIn } from "../lib/database";
 
 export default function AuthPage({ onAuth }) {
-  const [mode, setMode] = useState("login"); // login | signup | forgot
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    setMessage("");
     setLoading(true);
 
     try {
-      if (mode === "login") {
-        await signIn(email, password);
-        onAuth();
-      } else if (mode === "signup") {
-        if (!fullName.trim()) {
-          setError("Please enter your full name");
-          setLoading(false);
-          return;
-        }
-        await signUp(email, password, fullName.trim());
-        setMessage("Check your email for a confirmation link, then sign in.");
-        setMode("login");
-      }
+      await signIn(email, password);
+      onAuth();
     } catch (err) {
       setError(err.message);
     }
@@ -47,23 +32,8 @@ export default function AuthPage({ onAuth }) {
         </div>
 
         {error && <div style={styles.errorBox}>{error}</div>}
-        {message && <div style={styles.successBox}>{message}</div>}
 
         <form onSubmit={handleSubmit}>
-          {mode === "signup" && (
-            <div style={styles.fieldWrap}>
-              <label style={styles.label}>Full Name</label>
-              <input
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Your name"
-                style={styles.input}
-                required
-              />
-            </div>
-          )}
-
           <div style={styles.fieldWrap}>
             <label style={styles.label}>Email</label>
             <input
@@ -76,48 +46,26 @@ export default function AuthPage({ onAuth }) {
             />
           </div>
 
-          {mode !== "forgot" && (
-            <div style={styles.fieldWrap}>
-              <label style={styles.label}>Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                style={styles.input}
-                required
-                minLength={6}
-              />
-            </div>
-          )}
+          <div style={styles.fieldWrap}>
+            <label style={styles.label}>Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              style={styles.input}
+              required
+              minLength={6}
+            />
+          </div>
 
           <button type="submit" style={styles.btn} disabled={loading}>
-            {loading
-              ? "Please wait…"
-              : mode === "login"
-              ? "Sign In"
-              : mode === "signup"
-              ? "Create Account"
-              : "Send Reset Link"}
+            {loading ? "Please wait…" : "Sign In"}
           </button>
         </form>
 
         <div style={styles.footer}>
-          {mode === "login" ? (
-            <>
-              <span style={styles.footerText}>Don't have an account?</span>
-              <button style={styles.link} onClick={() => { setMode("signup"); setError(""); }}>
-                Sign up
-              </button>
-            </>
-          ) : (
-            <>
-              <span style={styles.footerText}>Already have an account?</span>
-              <button style={styles.link} onClick={() => { setMode("login"); setError(""); }}>
-                Sign in
-              </button>
-            </>
-          )}
+          <span style={styles.footerText}>Access is managed by your administrator.</span>
         </div>
       </div>
     </div>

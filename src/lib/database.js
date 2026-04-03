@@ -7,29 +7,47 @@ export async function signIn(email, password) {
   return data;
 }
 
-export async function signUp(email, password, fullName) {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: { data: { full_name: fullName } },
-  });
-  if (error) throw error;
-  return data;
-}
-
 export async function signOut() {
   const { error } = await supabase.auth.signOut();
-  if (error) throw error;
-}
-
-export async function resetPassword(email) {
-  const { error } = await supabase.auth.resetPasswordForEmail(email);
   if (error) throw error;
 }
 
 export async function getSession() {
   const { data } = await supabase.auth.getSession();
   return data.session;
+}
+
+/* ─────────────────  USER MANAGEMENT (RPC)  ───────────────── */
+export async function getAllUsers() {
+  const { data, error } = await supabase.rpc("get_all_users");
+  if (error) throw error;
+  return data;
+}
+
+export async function createAppUser(email, password, fullName, role = "user") {
+  const { data, error } = await supabase.rpc("create_app_user", {
+    p_email: email,
+    p_password: password,
+    p_full_name: fullName,
+    p_role: role,
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function updateUserRole(userId, newRole) {
+  const { error } = await supabase.rpc("update_user_role", {
+    p_user_id: userId,
+    p_new_role: newRole,
+  });
+  if (error) throw error;
+}
+
+export async function deleteAppUser(userId) {
+  const { error } = await supabase.rpc("delete_app_user", {
+    p_user_id: userId,
+  });
+  if (error) throw error;
 }
 
 /* ─────────────────  PROFILE  ───────────────── */

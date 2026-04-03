@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createBoard } from "../lib/database";
 import { DEFAULT_COLUMNS } from "../lib/constants";
 
-export default function BoardSelector({ boards, userId, onSelect, onRefresh, onLogout, profile }) {
+export default function BoardSelector({ boards, userId, onSelect, onRefresh, onLogout, onManageUsers, profile }) {
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [desc, setDesc] = useState("");
@@ -41,11 +41,17 @@ export default function BoardSelector({ boards, userId, onSelect, onRefresh, onL
             <p style={styles.subtitle}>Select a board to get started</p>
           </div>
           <div style={styles.userArea}>
+            {onManageUsers && (
+              <button onClick={onManageUsers} style={styles.manageUsersBtn}>
+                Manage Users
+              </button>
+            )}
             <div style={{ ...styles.avatar, background: profile?.avatar_color || "var(--accent)" }}>
               {initials}
             </div>
             <div>
               <p style={{ fontSize: 13, fontWeight: 600 }}>{profile?.full_name}</p>
+              <p style={{ fontSize: 10, color: "var(--accent)", fontWeight: 600, textTransform: "uppercase" }}>{profile?.role}</p>
               <button onClick={onLogout} style={styles.logoutBtn}>Sign out</button>
             </div>
           </div>
@@ -177,6 +183,17 @@ const styles = {
     fontFamily: "'DM Sans', sans-serif",
     padding: 0,
     textDecoration: "underline",
+  },
+  manageUsersBtn: {
+    background: "var(--surface2)",
+    border: "1px solid var(--border)",
+    borderRadius: 8,
+    padding: "8px 16px",
+    color: "var(--accent)",
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: "pointer",
+    fontFamily: "'DM Sans', sans-serif",
   },
   grid: {
     display: "grid",
