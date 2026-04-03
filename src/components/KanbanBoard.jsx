@@ -7,10 +7,14 @@ import {
   deleteCard as dbDeleteCard,
   createColumn,
   getBoardMembers,
+  addBoardMember,
   inviteUserByEmail,
   removeBoardMember,
   getPendingInvites,
   subscribeToBoard,
+  updateBoard,
+  deleteBoard,
+  getAllProfiles,
 } from "../lib/database";
 import { LABELS, PRIORITY } from "../lib/constants";
 
@@ -25,6 +29,7 @@ export default function KanbanBoard({ board, userId, profile, onBack }) {
   const [modal, setModal] = useState(null);
   const [addingTo, setAddingTo] = useState(null);
   const [showMembers, setShowMembers] = useState(false);
+  const [showBoardSettings, setShowBoardSettings] = useState(false);
   const [filterLabel, setFilterLabel] = useState(null);
   const [filterPriority, setFilterPriority] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -232,6 +237,11 @@ export default function KanbanBoard({ board, userId, profile, onBack }) {
               Manage Team
             </button>
           )}
+          {isAdmin && (
+            <button onClick={() => setShowBoardSettings(true)} style={{ ...memberBtnStyle, color: "var(--text-dim)" }}>
+              ⚙️ Settings
+            </button>
+          )}
         </div>
       </header>
 
@@ -346,6 +356,23 @@ export default function KanbanBoard({ board, userId, profile, onBack }) {
           pendingInvites={pendingInvites}
           onRefresh={loadData}
           onClose={() => setShowMembers(false)}
+        />
+      )}
+
+      {showBoardSettings && isAdmin && (
+        <BoardSettingsModal
+          board={board}
+          onUpdate={async (updates) => {
+            await updateBoard(board.id, updates);
+            Object.assign(board, updates);
+            loadData();
+          }}
+          onDelete={async () => {
+            if (!confirm("Delete this board and all its data? This cannot be undone.")) return;
+            await deleteBoard(board.id);
+            onBack();
+          }}
+          onClose={() => setShowBoardSettings(false)}
         />
       )}
     </div>
@@ -583,12 +610,36 @@ function CardDetailModal({ card: c, columns, members, editMode, setEditMode, onU
 
 /* ─────────────────  MEMBERS MODAL  ───────────────── */
 function MembersModal({ boardId, members, pendingInvites, onRefresh, onClose }) {
-  const [email, setEmail] = useState("");
+  const [allUsers, setAllUsers] = useState([]);
   const [role, setRole] = useState("member");
   const [sending, setSending] = useState(false);
   const [msg, setMsg] = useState("");
+  const [showEmailFallback, setShowEmailFallback] = useState(false);
+  const [email, setEmail] = useState("");
 
-  const handleInvite = async () => {
+  useEffect(() => {
+    getAllProfiles().then(setAllUsers).catch(console.error);
+  }, []);
+
+  const memberIds = members.map((m) => m.id);
+  const availableUsers = allUsers.filter((u) => !memberIds.includes(u.id));
+
+  const handleAddUser = async (userId) => {
+    if (!userId) return;
+    setSending(true);
+    setMsg("");
+    try {
+      const user = allUsers.find((u) => u.id === userId);
+      await addBoardMember(boardId, userId, role);
+      setMsg(`${user?.full_name || "User"} added to the board!`);
+      onRefresh();
+    } catch (err) {
+      setMsg("Error: " + err.message);
+    }
+    setSending(false);
+  };
+
+  const handleInviteEmail = async () => {
     if (!email.trim()) return;
     setSending(true);
     setMsg("");
@@ -621,25 +672,62 @@ function MembersModal({ boardId, members, pendingInvites, onRefresh, onClose }) 
     <Overlay onClose={onClose}>
       <h2 style={modalTitleStyle}>Manage Team</h2>
 
-      {/* Invite */}
-      <Field label="Invite by Email">
+      {/* Add from existing users */}
+      <Field label="Add Member">
         <div style={{ display: "flex", gap: 8 }}>
-          <input
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="teammate@email.com"
+          <select
+            value=""
+            onChange={(e) => handleAddUser(e.target.value)}
+            disabled={sending}
             style={{ ...inputStyle, flex: 1 }}
-            onKeyDown={(e) => e.key === "Enter" && handleInvite()}
-          />
+          >
+            <option value="">Select a user to add…</option>
+            {availableUsers.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.full_name} — {u.email} ({u.role})
+              </option>
+            ))}
+          </select>
           <select value={role} onChange={(e) => setRole(e.target.value)} style={{ ...inputStyle, width: 100 }}>
             <option value="member">Member</option>
             <option value="admin">Admin</option>
           </select>
-          <Btn onClick={handleInvite} disabled={sending || !email.trim()}>
-            {sending ? "…" : "Invite"}
-          </Btn>
         </div>
+        {availableUsers.length === 0 && !showEmailFallback && (
+          <p style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 6 }}>
+            All users are already members.{" "}
+            <button onClick={() => setShowEmailFallback(true)} style={{ background: "none", border: "none", color: "var(--accent)", fontSize: 11, cursor: "pointer", textDecoration: "underline", fontFamily: "'DM Sans', sans-serif" }}>
+              Invite by email instead
+            </button>
+          </p>
+        )}
+        {availableUsers.length > 0 && (
+          <p style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 6 }}>
+            Don't see the user?{" "}
+            <button onClick={() => setShowEmailFallback(!showEmailFallback)} style={{ background: "none", border: "none", color: "var(--accent)", fontSize: 11, cursor: "pointer", textDecoration: "underline", fontFamily: "'DM Sans', sans-serif" }}>
+              {showEmailFallback ? "Hide email invite" : "Invite by email"}
+            </button>
+          </p>
+        )}
       </Field>
+
+      {/* Email fallback */}
+      {showEmailFallback && (
+        <Field label="Invite by Email">
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="teammate@email.com"
+              style={{ ...inputStyle, flex: 1 }}
+              onKeyDown={(e) => e.key === "Enter" && handleInviteEmail()}
+            />
+            <Btn onClick={handleInviteEmail} disabled={sending || !email.trim()}>
+              {sending ? "…" : "Invite"}
+            </Btn>
+          </div>
+        </Field>
+      )}
 
       {msg && <p style={{ fontSize: 12, color: "var(--accent)", marginBottom: 12 }}>{msg}</p>}
 
@@ -681,6 +769,85 @@ function MembersModal({ boardId, members, pendingInvites, onRefresh, onClose }) 
 
       <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
         <Btn variant="ghost" onClick={onClose}>Close</Btn>
+      </div>
+    </Overlay>
+  );
+}
+
+/* ─────────────────  BOARD SETTINGS MODAL  ───────────────── */
+function BoardSettingsModal({ board, onUpdate, onDelete, onClose }) {
+  const [name, setName] = useState(board.name);
+  const [desc, setDesc] = useState(board.description || "");
+  const [emoji, setEmoji] = useState(board.emoji);
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (!name.trim()) return;
+    setSaving(true);
+    try {
+      await onUpdate({ name: name.trim(), description: desc.trim(), emoji });
+      onClose();
+    } catch (err) {
+      alert("Failed to save: " + err.message);
+    }
+    setSaving(false);
+  };
+
+  const handleDelete = async () => {
+    try {
+      await onDelete();
+    } catch (err) {
+      alert("Failed to delete: " + err.message);
+    }
+  };
+
+  return (
+    <Overlay onClose={onClose}>
+      <h2 style={modalTitleStyle}>Board Settings</h2>
+
+      <Field label="Board Name">
+        <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
+      </Field>
+
+      <Field label="Description">
+        <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="What is this board for?" style={inputStyle} />
+      </Field>
+
+      <Field label="Icon">
+        <div style={{ display: "flex", gap: 8 }}>
+          {["📋", "🎯", "📢", "💰", "🏠", "⚙️", "🚀", "📊"].map((e) => (
+            <button
+              key={e}
+              onClick={() => setEmoji(e)}
+              style={{
+                width: 40, height: 40, borderRadius: 8, fontSize: 18, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                background: emoji === e ? "var(--accent-soft)" : "var(--bg)",
+                border: `1px solid ${emoji === e ? "var(--accent)" : "var(--border)"}`,
+              }}
+            >
+              {e}
+            </button>
+          ))}
+        </div>
+      </Field>
+
+      <div style={{ borderTop: "1px solid var(--border)", paddingTop: 16, marginTop: 8 }}>
+        <Field label="Danger Zone">
+          <button onClick={handleDelete} style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", borderRadius: 8, padding: "10px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", width: "100%" }}>
+            🗑️ Delete This Board
+          </button>
+          <p style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 6 }}>
+            This will permanently delete the board and all its cards, columns, and members.
+          </p>
+        </Field>
+      </div>
+
+      <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 16 }}>
+        <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
+        <Btn onClick={handleSave} disabled={!name.trim() || saving}>
+          {saving ? "Saving…" : "Save Changes"}
+        </Btn>
       </div>
     </Overlay>
   );

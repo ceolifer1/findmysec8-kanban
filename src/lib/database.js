@@ -113,9 +113,34 @@ export async function createBoard(name, description, emoji, ownerId) {
   return data;
 }
 
+export async function updateBoard(boardId, updates) {
+  const { data, error } = await supabase
+    .from("boards")
+    .update(updates)
+    .eq("id", boardId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 export async function deleteBoard(boardId) {
+  // Delete related data first (cards, columns, members, invites)
+  await supabase.from("cards").delete().eq("board_id", boardId);
+  await supabase.from("columns").delete().eq("board_id", boardId);
+  await supabase.from("board_members").delete().eq("board_id", boardId);
+  await supabase.from("invites").delete().eq("board_id", boardId);
   const { error } = await supabase.from("boards").delete().eq("id", boardId);
   if (error) throw error;
+}
+
+export async function getAllProfiles() {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, full_name, email, avatar_color, role")
+    .order("full_name", { ascending: true });
+  if (error) throw error;
+  return data || [];
 }
 
 /* ─────────────────  BOARD MEMBERS  ───────────────── */
