@@ -1,0 +1,245 @@
+import { supabase } from "./supabase";
+
+/* ─────────────────  AUTH  ───────────────── */
+export async function signIn(email, password) {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+  return data;
+}
+
+export async function signUp(email, password, fullName) {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { data: { full_name: fullName } },
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function signOut() {
+  const { error } = await supabase.auth.signOut();
+  if (error) throw error;
+}
+
+export async function resetPassword(email) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email);
+  if (error) throw error;
+}
+
+export async function getSession() {
+  const { data } = await supabase.auth.getSession();
+  return data.session;
+}
+
+/* ─────────────────  PROFILE  ───────────────── */
+export async function getProfile(userId) {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", userId)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateProfile(userId, updates) {
+  const { data, error } = await supabase
+    .from("profiles")
+    .update(updates)
+    .eq("id", userId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+/* ─────────────────  BOARDS  ───────────────── */
+export async function getBoards(userId) {
+  const { data, error } = await supabase
+    .from("board_members")
+    .select("board_id, role, boards(id, name, description, emoji, created_at, owner_id)")
+    .eq("user_id", userId);
+  if (error) throw error;
+  return data.map((bm) => ({ ...bm.boards, memberRole: bm.role }));
+}
+
+export async function createBoard(name, description, emoji, ownerId) {
+  const { data, error } = await supabase
+    .from("boards")
+    .insert({ name, description, emoji, owner_id: ownerId })
+    .select()
+    .single();
+  if (error) throw error;
+
+  // Add owner as admin member
+  await supabase
+    .from("board_members")
+    .insert({ board_id: data.id, user_id: ownerId, role: "admin" });
+
+  return data;
+}
+
+export async function deleteBoard(boardId) {
+  const { error } = await supabase.from("boards").delete().eq("id", boardId);
+  if (error) throw error;
+}
+
+/* ─────────────────  BOARD MEMBERS  ───────────────── */
+export async function getBoardMembers(boardId) {
+  const { data, error } = await supabase
+    .from("board_members")
+    .select("user_id, role, profiles(id, full_name, email, avatar_color)")
+    .eq("board_id", boardId);
+  if (error) throw error;
+  return data.map((bm) => ({ ...bm.profiles, role: bm.role }));
+}
+
+export async function addBoardMember(boardId, userId, role = "member") {
+  const { error } = await supabase
+    .from("board_members")
+    .insert({ board_id: boardId, user_id: userId, role });
+  if (error) throw error;
+}
+
+export async function removeBoardMember(boardId, userId) {
+  const { error } = await supabase
+    .from("board_members")
+    .delete()
+    .eq("board_id", boardId)
+    .eq("user_id", userId);
+  if (error) throw error;
+}
+
+/* ─────────────────  COLUMNS  ───────────────── */
+export async function getColumns(boardId) {
+  const { data, error } = await supabase
+    .from("columns")
+    .select("*")
+    .eq("board_id", boardId)
+    .order("position", { ascending: true });
+  if (error) throw error;
+  return data;
+}
+
+export async function createColumn(boardId, name, emoji, position) {
+  const { data, error } = await supabase
+    .from("columns")
+    .insert({ board_id: boardId, name, emoji, position })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+/* ─────────────────  CARDS  ───────────────── */
+export async function getCards(boardId) {
+  const { data, error } = await supabase
+    .from("cards")
+    .select("*")
+    .eq("board_id", boardId)
+    .order("position", { ascending: true });
+  if (error) throw error;
+  return data;
+}
+
+export async function createCard(boardId, columnId, card) {
+  const { data, error } = await supabase
+    .from("cards")
+    .insert({
+      board_id: boardId,
+      column_id: columnId,
+      title: card.title,
+      description: card.description || "",
+      labels: card.labels || [],
+      priority: card.priority || "medium",
+      assignee: card.assignee || "",
+      position: card.position || 0,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateCard(cardId, updates) {
+  const { data, error } = await supabase
+    .from("cards")
+    .update(updates)
+    .eq("id", cardId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteCard(cardId) {
+  const { error } = await supabase.from("cards").delete().eq("id", cardId);
+  if (error) throw error;
+}
+
+/* ─────────────────  INVITES  ───────────────── */
+export async function inviteUserByEmail(email, boardId, role = "member") {
+  // Check if user already exists
+  const { data: existingProfile } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("email", email)
+    .maybeSingle();
+
+  if (existingProfile) {
+    // Add them directly
+    await addBoardMember(boardId, existingProfile.id, role);
+    return { status: "added", userId: existingProfile.id };
+  }
+
+  // Store pending invite
+  const { data, error } = await supabase
+    .from("invites")
+    .insert({ email, board_id: boardId, role })
+    .select()
+    .single();
+  if (error) throw error;
+  return { status: "invited", invite: data };
+}
+
+export async function getPendingInvites(boardId) {
+  const { data, error } = await supabase
+    .from("invites")
+    .select("*")
+    .eq("board_id", boardId)
+    .eq("accepted", false);
+  if (error) throw error;
+  return data;
+}
+
+export async function acceptInvitesForEmail(email, userId) {
+  const { data: invites } = await supabase
+    .from("invites")
+    .select("*")
+    .eq("email", email)
+    .eq("accepted", false);
+
+  if (invites && invites.length > 0) {
+    for (const inv of invites) {
+      await addBoardMember(inv.board_id, userId, inv.role);
+      await supabase
+        .from("invites")
+        .update({ accepted: true })
+        .eq("id", inv.id);
+    }
+  }
+  return invites || [];
+}
+
+/* ─────────────────  REALTIME  ───────────────── */
+export function subscribeToBoard(boardId, onCardChange) {
+  return supabase
+    .channel(`board-${boardId}`)
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "cards", filter: `board_id=eq.${boardId}` },
+      (payload) => onCardChange(payload)
+    )
+    .subscribe();
+}
