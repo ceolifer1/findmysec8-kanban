@@ -1,20 +1,64 @@
 import { useState } from "react";
-import { signIn } from "../lib/database";
+import { signIn, requestPasswordReset } from "../lib/database";
+import { supabase } from "../lib/supabase";
 
 export default function AuthPage({ onAuth }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+  const [view, setView] = useState("login"); // login | forgot | reset
 
-  const handleSubmit = async (e) => {
+  // Check if we arrived via a password reset link (has access_token in hash)
+  useState(() => {
+    const hash = window.location.hash;
+    if (hash && hash.includes("type=recovery")) {
+      setView("reset");
+    }
+  });
+
+  const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
+    setSuccess("");
     setLoading(true);
-
     try {
       await signIn(email, password);
       onAuth();
+    } catch (err) {
+      setError(err.message);
+    }
+    setLoading(false);
+  };
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    setLoading(true);
+    try {
+      await requestPasswordReset(email);
+      setSuccess("If that email is registered, a reset link has been sent. Check your inbox.");
+    } catch (err) {
+      setError(err.message);
+    }
+    setLoading(false);
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    setLoading(true);
+    try {
+      const { error: err } = await supabase.auth.updateUser({ password: newPassword });
+      if (err) throw err;
+      setSuccess("Password updated! You can now sign in.");
+      setView("login");
+      // Clear hash
+      window.location.hash = "";
     } catch (err) {
       setError(err.message);
     }
@@ -32,41 +76,129 @@ export default function AuthPage({ onAuth }) {
         </div>
 
         {error && <div style={styles.errorBox}>{error}</div>}
+        {success && <div style={styles.successBox}>{success}</div>}
 
-        <form onSubmit={handleSubmit}>
-          <div style={styles.fieldWrap}>
-            <label style={styles.label}>Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              style={styles.input}
-              required
-            />
-          </div>
+        {/* ── LOGIN VIEW ── */}
+        {view === "login" && (
+          <form onSubmit={handleLogin}>
+            <div style={styles.fieldWrap}>
+              <label style={styles.label}>Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                style={styles.input}
+                required
+              />
+            </div>
 
-          <div style={styles.fieldWrap}>
-            <label style={styles.label}>Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              style={styles.input}
-              required
-              minLength={6}
-            />
-          </div>
+            <div style={styles.fieldWrap}>
+              <label style={styles.label}>Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                style={styles.input}
+                required
+                minLength={6}
+              />
+            </div>
 
-          <button type="submit" style={styles.btn} disabled={loading}>
-            {loading ? "Please wait…" : "Sign In"}
-          </button>
-        </form>
+            <button type="submit" style={styles.btn} disabled={loading}>
+              {loading ? "Please wait…" : "Sign In"}
+            </button>
 
-        <div style={styles.footer}>
-          <span style={styles.footerText}>Access is managed by your administrator.</span>
-        </div>
+            <div style={styles.footer}>
+              <button
+                type="button"
+                onClick={() => { setView("forgot"); setError(""); setSuccess(""); }}
+                style={styles.link}
+              >
+                Forgot password?
+              </button>
+            </div>
+
+            <div style={{ textAlign: "center", marginTop: 8 }}>
+              <span style={styles.footerText}>Access is managed by your administrator.</span>
+            </div>
+          </form>
+        )}
+
+        {/* ── FORGOT PASSWORD VIEW ── */}
+        {view === "forgot" && (
+          <form onSubmit={handleForgotPassword}>
+            <p style={{ color: "var(--text-dim)", fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
+              Enter your email and we'll send you a link to reset your password.
+              If your admin set up your account, ask them to reset it from the Manage Users panel.
+            </p>
+
+            <div style={styles.fieldWrap}>
+              <label style={styles.label}>Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                style={styles.input}
+                required
+                autoFocus
+              />
+            </div>
+
+            <button type="submit" style={styles.btn} disabled={loading}>
+              {loading ? "Sending…" : "Send Reset Link"}
+            </button>
+
+            <div style={styles.footer}>
+              <button
+                type="button"
+                onClick={() => { setView("login"); setError(""); setSuccess(""); }}
+                style={styles.link}
+              >
+                Back to sign in
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* ── RESET PASSWORD VIEW (from email link) ── */}
+        {view === "reset" && (
+          <form onSubmit={handleResetPassword}>
+            <p style={{ color: "var(--text-dim)", fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
+              Enter your new password below.
+            </p>
+
+            <div style={styles.fieldWrap}>
+              <label style={styles.label}>New Password</label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Minimum 6 characters"
+                style={styles.input}
+                required
+                minLength={6}
+                autoFocus
+              />
+            </div>
+
+            <button type="submit" style={styles.btn} disabled={loading}>
+              {loading ? "Updating…" : "Update Password"}
+            </button>
+
+            <div style={styles.footer}>
+              <button
+                type="button"
+                onClick={() => { setView("login"); setError(""); setSuccess(""); }}
+                style={styles.link}
+              >
+                Back to sign in
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );
@@ -156,7 +288,7 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    marginTop: 20,
+    marginTop: 16,
   },
   footerText: { color: "var(--text-dim)", fontSize: 13 },
   link: {
@@ -168,5 +300,6 @@ const styles = {
     cursor: "pointer",
     fontFamily: "'DM Sans', sans-serif",
     textDecoration: "underline",
+    padding: 0,
   },
 };

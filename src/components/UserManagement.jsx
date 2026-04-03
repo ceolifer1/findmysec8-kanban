@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
-import { getAllUsers, createAppUser, updateUserRole, deleteAppUser } from "../lib/database";
+import { getAllUsers, createAppUser, updateUserRole, deleteAppUser, resetUserPassword, updateUserInfo } from "../lib/database";
 
 export default function UserManagement({ profile, onBack }) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [resetUser, setResetUser] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -100,7 +102,7 @@ export default function UserManagement({ profile, onBack }) {
                     <p style={{ fontSize: 12, color: "var(--text-dim)" }}>{u.email}</p>
                   </div>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   {canModify ? (
                     <select
                       value={u.role}
@@ -110,13 +112,30 @@ export default function UserManagement({ profile, onBack }) {
                       {roleOptions.map((r) => (
                         <option key={r} value={r}>{r}</option>
                       ))}
-                      {/* Show current role even if not in options */}
                       {!roleOptions.includes(u.role) && (
                         <option value={u.role}>{u.role}</option>
                       )}
                     </select>
                   ) : (
                     <span style={roleBadge(u.role)}>{u.role}</span>
+                  )}
+                  {canModify && (
+                    <button
+                      onClick={() => { setEditingUser(u); setError(""); setSuccess(""); }}
+                      style={actionBtn}
+                      title="Edit user"
+                    >
+                      ✏️
+                    </button>
+                  )}
+                  {canModify && (
+                    <button
+                      onClick={() => { setResetUser(u); setError(""); setSuccess(""); }}
+                      style={actionBtn}
+                      title="Reset password"
+                    >
+                      🔑
+                    </button>
                   )}
                   {canModify && (
                     <button onClick={() => handleDelete(u)} style={dangerBtn} title="Remove user">
@@ -142,11 +161,39 @@ export default function UserManagement({ profile, onBack }) {
             onError={(msg) => setError(msg)}
           />
         )}
+
+        {/* Edit User Modal */}
+        {editingUser && (
+          <EditUserModal
+            user={editingUser}
+            onClose={() => setEditingUser(null)}
+            onSaved={(msg) => {
+              setEditingUser(null);
+              setSuccess(msg);
+              loadUsers();
+            }}
+            onError={(msg) => setError(msg)}
+          />
+        )}
+
+        {/* Reset Password Modal */}
+        {resetUser && (
+          <ResetPasswordModal
+            user={resetUser}
+            onClose={() => setResetUser(null)}
+            onSaved={(msg) => {
+              setResetUser(null);
+              setSuccess(msg);
+            }}
+            onError={(msg) => setError(msg)}
+          />
+        )}
       </div>
     </div>
   );
 }
 
+/* ── CREATE USER MODAL ── */
 function CreateUserModal({ isSuperadmin, onClose, onCreated, onError }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -208,11 +255,125 @@ function CreateUserModal({ isSuperadmin, onClose, onCreated, onError }) {
   );
 }
 
+/* ── EDIT USER MODAL ── */
+function EditUserModal({ user, onClose, onSaved, onError }) {
+  const [fullName, setFullName] = useState(user.full_name || "");
+  const [email, setEmail] = useState(user.email || "");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!fullName.trim() || !email.trim()) return;
+    setLoading(true);
+    try {
+      const nameChanged = fullName.trim() !== user.full_name;
+      const emailChanged = email.trim() !== user.email;
+      await updateUserInfo(
+        user.id,
+        nameChanged ? fullName.trim() : null,
+        emailChanged ? email.trim() : null,
+      );
+      onSaved(`${fullName.trim()} updated successfully.`);
+    } catch (err) {
+      onError(err.message);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div onClick={onClose} style={overlay}>
+      <div onClick={(e) => e.stopPropagation()} style={modal}>
+        <h2 style={modalTitle}>Edit User</h2>
+        <form onSubmit={handleSubmit}>
+          <div style={fieldWrap}>
+            <label style={label}>Full Name</label>
+            <input value={fullName} onChange={(e) => setFullName(e.target.value)} style={input} required autoFocus />
+          </div>
+          <div style={fieldWrap}>
+            <label style={label}>Email</label>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} style={input} required />
+          </div>
+          <p style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 12 }}>
+            Changing the email will update both the profile and login credentials.
+          </p>
+          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20 }}>
+            <button type="button" onClick={onClose} style={ghostBtn}>Cancel</button>
+            <button type="submit" disabled={loading} style={primaryBtn}>
+              {loading ? "Saving…" : "Save Changes"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+/* ── RESET PASSWORD MODAL ── */
+function ResetPasswordModal({ user, onClose, onSaved, onError }) {
+  const [newPassword, setNewPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!newPassword.trim() || newPassword.length < 6) return;
+    setLoading(true);
+    try {
+      await resetUserPassword(user.id, newPassword.trim());
+      onSaved(`Password for ${user.email} has been reset.`);
+    } catch (err) {
+      onError(err.message);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div onClick={onClose} style={overlay}>
+      <div onClick={(e) => e.stopPropagation()} style={modal}>
+        <h2 style={modalTitle}>Reset Password</h2>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, padding: "10px 12px", background: "var(--bg)", borderRadius: 8, border: "1px solid var(--border)" }}>
+          <div style={{ ...avatar, width: 32, height: 32, fontSize: 12, background: user.avatar_color || "var(--accent)" }}>
+            {(user.full_name || "?").charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <p style={{ fontSize: 13, fontWeight: 600 }}>{user.full_name}</p>
+            <p style={{ fontSize: 11, color: "var(--text-dim)" }}>{user.email}</p>
+          </div>
+        </div>
+        <form onSubmit={handleSubmit}>
+          <div style={fieldWrap}>
+            <label style={label}>New Password</label>
+            <input
+              type="text"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Minimum 6 characters"
+              style={input}
+              required
+              minLength={6}
+              autoFocus
+            />
+          </div>
+          <p style={{ fontSize: 11, color: "var(--text-dim)", marginBottom: 12 }}>
+            The user will need to sign in with this new password. Share it with them securely.
+          </p>
+          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20 }}>
+            <button type="button" onClick={onClose} style={ghostBtn}>Cancel</button>
+            <button type="submit" disabled={loading || newPassword.length < 6} style={primaryBtn}>
+              {loading ? "Resetting…" : "Reset Password"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 /* ── Styles ── */
 const backBtn = { background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 8, padding: "6px 14px", color: "var(--text-dim)", fontSize: 12, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" };
 const primaryBtn = { background: "var(--accent)", color: "#000", border: "none", borderRadius: 8, padding: "10px 20px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" };
 const ghostBtn = { background: "var(--surface2)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" };
 const dangerBtn = { background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", borderRadius: 8, width: 32, height: 32, fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', sans-serif" };
+const actionBtn = { background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 8, width: 32, height: 32, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', sans-serif" };
 const userRow = { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, gap: 12 };
 const avatar = { width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: "#000", flexShrink: 0 };
 const selectStyle = { background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 6, padding: "5px 10px", color: "var(--text)", fontSize: 12, fontFamily: "'DM Sans', sans-serif", outline: "none" };

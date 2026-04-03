@@ -50,6 +50,30 @@ export async function deleteAppUser(userId) {
   if (error) throw error;
 }
 
+export async function resetUserPassword(userId, newPassword) {
+  const { error } = await supabase.rpc("reset_user_password", {
+    p_user_id: userId,
+    p_new_password: newPassword,
+  });
+  if (error) throw error;
+}
+
+export async function updateUserInfo(userId, fullName, email) {
+  const { error } = await supabase.rpc("update_user_info", {
+    p_user_id: userId,
+    p_full_name: fullName || null,
+    p_email: email || null,
+  });
+  if (error) throw error;
+}
+
+export async function requestPasswordReset(email) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + window.location.pathname,
+  });
+  if (error) throw error;
+}
+
 /* ─────────────────  PROFILE  ───────────────── */
 export async function getProfile(userId) {
   const { data, error } = await supabase
