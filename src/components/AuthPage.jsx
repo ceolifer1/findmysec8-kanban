@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { signIn } from "../lib/database";
+import { signIn, requestPasswordReset } from "../lib/database";
 import { supabase } from "../lib/supabase";
 
 export default function AuthPage({ onAuth }) {
@@ -27,6 +27,20 @@ export default function AuthPage({ onAuth }) {
     try {
       await signIn(email, password);
       onAuth();
+    } catch (err) {
+      setError(err.message);
+    }
+    setLoading(false);
+  };
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    setLoading(true);
+    try {
+      await requestPasswordReset(email);
+      setSuccess("If that email is registered, a reset link has been sent. Check your inbox (and your spam folder).");
     } catch (err) {
       setError(err.message);
     }
@@ -114,51 +128,29 @@ export default function AuthPage({ onAuth }) {
 
         {/* ── FORGOT PASSWORD VIEW ── */}
         {view === "forgot" && (
-          <div>
+          <form onSubmit={handleForgotPassword}>
             <p style={{ color: "var(--text-dim)", fontSize: 13, marginBottom: 16, lineHeight: 1.6 }}>
-              Password resets for this workspace are handled by an administrator.
-              Please contact one of the admins below and they can reset your password
-              from the <strong style={{ color: "var(--text)" }}>Manage Users</strong> panel.
+              Enter your email and we'll send you a link to reset your password.
+              If you don't receive it, contact an admin to reset it from the
+              Manage Users panel.
             </p>
 
-            <div style={{
-              background: "var(--bg)",
-              border: "1px solid var(--border)",
-              borderRadius: 8,
-              padding: "14px 16px",
-              marginBottom: 20,
-            }}>
-              <div style={{
-                fontSize: 11,
-                fontWeight: 600,
-                color: "var(--text-dim)",
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
-                marginBottom: 10,
-              }}>
-                Workspace Admins
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <div style={{ fontSize: 13, color: "var(--text)" }}>
-                  <div style={{ fontWeight: 600 }}>Ashton Couture</div>
-                  <a href="mailto:ceo@savagesquad.com" style={{ color: "var(--accent)", fontSize: 12, textDecoration: "none" }}>
-                    ceo@savagesquad.com
-                  </a>
-                </div>
-                <div style={{ fontSize: 13, color: "var(--text)" }}>
-                  <div style={{ fontWeight: 600 }}>Lacie Lugo</div>
-                  <a href="mailto:lacie@centurionfinancial.com" style={{ color: "var(--accent)", fontSize: 12, textDecoration: "none" }}>
-                    lacie@centurionfinancial.com
-                  </a>
-                </div>
-                <div style={{ fontSize: 13, color: "var(--text)" }}>
-                  <div style={{ fontWeight: 600 }}>Tricia Littell</div>
-                  <a href="mailto:tricia@centurionfinancial.com" style={{ color: "var(--accent)", fontSize: 12, textDecoration: "none" }}>
-                    tricia@centurionfinancial.com
-                  </a>
-                </div>
-              </div>
+            <div style={styles.fieldWrap}>
+              <label style={styles.label}>Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                style={styles.input}
+                required
+                autoFocus
+              />
             </div>
+
+            <button type="submit" style={styles.btn} disabled={loading}>
+              {loading ? "Sending…" : "Send Reset Link"}
+            </button>
 
             <div style={styles.footer}>
               <button
@@ -169,7 +161,7 @@ export default function AuthPage({ onAuth }) {
                 Back to sign in
               </button>
             </div>
-          </div>
+          </form>
         )}
 
         {/* ── RESET PASSWORD VIEW (from email link) ── */}
