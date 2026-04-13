@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { signIn, requestPasswordReset } from "../lib/database";
 import { supabase } from "../lib/supabase";
 
@@ -6,18 +6,29 @@ export default function AuthPage({ onAuth }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState("login"); // login | forgot | reset
 
-  // Check if we arrived via a password reset link (has access_token in hash)
-  useState(() => {
+  // Detect password recovery link in URL hash and listen for RECOVERY event
+  useEffect(() => {
+    // Check hash on mount (handles page refresh with recovery token)
     const hash = window.location.hash;
     if (hash && hash.includes("type=recovery")) {
       setView("reset");
     }
-  });
+
+    // Listen for Supabase PASSWORD_RECOVERY event (handles redirect flow)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setView("reset");
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -40,7 +51,7 @@ export default function AuthPage({ onAuth }) {
     setLoading(true);
     try {
       await requestPasswordReset(email);
-      setSuccess("If that email is registered, a reset link has been sent. Check your inbox (and your spam folder).");
+      setSuccess("If that email is registered, a reset link has been sent. Check your inbox.");
     } catch (err) {
       setError(err.message);
     }
@@ -51,14 +62,30 @@ export default function AuthPage({ onAuth }) {
     e.preventDefault();
     setError("");
     setSuccess("");
+
+    if (newPassword !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+    if (newPassword.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
+
     setLoading(true);
     try {
       const { error: err } = await supabase.auth.updateUser({ password: newPassword });
       if (err) throw err;
       setSuccess("Password updated! You can now sign in.");
+      setNewPassword("");
+      setConfirmPassword("");
+      // Clean up the URL hash so recovery tokens don't linger
+      if (window.location.hash) {
+        window.history.replaceState(null, "", window.location.pathname);
+      }
+      // Sign out the recovery session so user logs in fresh with new password
+      await supabase.auth.signOut();
       setView("login");
-      // Clear hash
-      window.location.hash = "";
     } catch (err) {
       setError(err.message);
     }
@@ -72,7 +99,7 @@ export default function AuthPage({ onAuth }) {
           <h1 style={styles.logo}>
             <span style={{ color: "var(--accent)" }}>Findmysec8</span>.com
           </h1>
-          <p style={styles.subtitle}>Team Workspace</p>
+          <p style={styles.subtitle}>Section 8 Workspace</p>
         </div>
 
         {error && <div style={styles.errorBox}>{error}</div>}
@@ -129,10 +156,9 @@ export default function AuthPage({ onAuth }) {
         {/* ── FORGOT PASSWORD VIEW ── */}
         {view === "forgot" && (
           <form onSubmit={handleForgotPassword}>
-            <p style={{ color: "var(--text-dim)", fontSize: 13, marginBottom: 16, lineHeight: 1.6 }}>
+            <p style={{ color: "var(--text-dim)", fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
               Enter your email and we'll send you a link to reset your password.
-              If you don't receive it, contact an admin to reset it from the
-              Manage Users panel.
+              If your admin set up your account, ask them to reset it from the Manage Users panel.
             </p>
 
             <div style={styles.fieldWrap}>
@@ -182,6 +208,19 @@ export default function AuthPage({ onAuth }) {
                 required
                 minLength={6}
                 autoFocus
+              />
+            </div>
+
+            <div style={styles.fieldWrap}>
+              <label style={styles.label}>Confirm Password</label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Re-enter your password"
+                style={styles.input}
+                required
+                minLength={6}
               />
             </div>
 
@@ -257,7 +296,7 @@ const styles = {
     width: "100%",
     padding: "12px 20px",
     background: "var(--accent)",
-    color: "#000",
+    color: "#fff",
     border: "none",
     borderRadius: 8,
     fontSize: 14,

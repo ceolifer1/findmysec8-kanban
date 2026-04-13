@@ -220,7 +220,7 @@ export default function KanbanBoard({ board, userId, profile, onBack }) {
                   justifyContent: "center",
                   fontSize: 11,
                   fontWeight: 700,
-                  color: "#000",
+                  color: "#fff",
                   marginLeft: i > 0 ? -6 : 0,
                   border: "2px solid var(--bg)",
                   zIndex: 5 - i,
@@ -737,7 +737,7 @@ function MembersModal({ boardId, members, pendingInvites, onRefresh, onClose }) 
           {members.map((m) => (
             <div key={m.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 10px", background: "var(--bg)", borderRadius: 8, border: "1px solid var(--border)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ width: 28, height: 28, borderRadius: "50%", background: m.avatar_color || "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#000" }}>
+                <div style={{ width: 28, height: 28, borderRadius: "50%", background: m.avatar_color || "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff" }}>
                   {m.full_name?.charAt(0).toUpperCase()}
                 </div>
                 <div>
@@ -876,7 +876,7 @@ function Field({ label, children, style }) {
 function Btn({ children, onClick, variant, disabled }) {
   const base = { fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, padding: "8px 16px", borderRadius: 8, border: "none", cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1 };
   const v = {
-    default: { background: "var(--accent)", color: "#000" },
+    default: { background: "var(--accent)", color: "#fff" },
     ghost: { background: "var(--surface2)", color: "var(--text)", border: "1px solid var(--border)" },
     danger: { background: "rgba(239,68,68,0.15)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.3)" },
   };

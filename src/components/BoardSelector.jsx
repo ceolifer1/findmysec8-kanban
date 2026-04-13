@@ -6,7 +6,7 @@ export default function BoardSelector({ boards, userId, onSelect, onRefresh, onL
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [desc, setDesc] = useState("");
-  const [emoji, setEmoji] = useState("📋");
+  const [emoji, setEmoji] = useState("\ud83d\udccb");
   const [template, setTemplate] = useState("general");
   const [loading, setLoading] = useState(false);
   const [settingsBoard, setSettingsBoard] = useState(null);
@@ -100,11 +100,6 @@ export default function BoardSelector({ boards, userId, onSelect, onRefresh, onL
   return (
     <div style={styles.container}>
       <div style={styles.inner}>
-        {/* Back to Hub */}
-        <a href="/kanban-hub/" style={styles.hubLink}>
-          <span style={{ fontSize: 14 }}>&larr;</span> Centurion Workspaces
-        </a>
-
         {/* Header */}
         <div style={styles.header}>
           <div>
@@ -147,7 +142,7 @@ export default function BoardSelector({ boards, userId, onSelect, onRefresh, onL
                   style={styles.gearBtn}
                   title="Board settings"
                 >
-                  ⚙️
+                  \u2699\ufe0f
                 </button>
               )}
               {/* Settings dropdown */}
@@ -180,7 +175,7 @@ export default function BoardSelector({ boards, userId, onSelect, onRefresh, onL
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Marketing, Sales, Operations"
+                  placeholder="e.g. Client Onboarding, Capital Raises, Operations"
                   style={styles.input}
                   autoFocus
                 />
@@ -199,7 +194,7 @@ export default function BoardSelector({ boards, userId, onSelect, onRefresh, onL
               <div style={styles.fieldWrap}>
                 <label style={styles.label}>Icon</label>
                 <div style={{ display: "flex", gap: 8 }}>
-                  {["📋", "🎯", "📢", "💰", "🏠", "⚙️", "🚀", "📊"].map((e) => (
+                  {["\ud83d\udccb", "\ud83c\udfaf", "\ud83d\udce2", "\ud83d\udcb0", "\ud83c\udfe0", "\u2699\ufe0f", "\ud83d\ude80", "\ud83d\udcca"].map((e) => (
                     <button
                       key={e}
                       onClick={() => setEmoji(e)}
@@ -218,9 +213,9 @@ export default function BoardSelector({ boards, userId, onSelect, onRefresh, onL
               <div style={styles.fieldWrap}>
                 <label style={styles.label}>Column Template</label>
                 <select value={template} onChange={(e) => setTemplate(e.target.value)} style={styles.input}>
-                  <option value="general">General (To Do → Done)</option>
-                  <option value="development">Development (Backlog → Deployed)</option>
-                  <option value="marketing">Marketing (Ideas → Published)</option>
+                  <option value="general">General (To Do \u2192 Done)</option>
+                  <option value="development">Development (Backlog \u2192 Deployed)</option>
+                  <option value="marketing">Marketing (Ideas \u2192 Published)</option>
                 </select>
               </div>
 
@@ -236,10 +231,10 @@ export default function BoardSelector({ boards, userId, onSelect, onRefresh, onL
                     }}
                     style={styles.input}
                   >
-                    <option value="">Select a user to add…</option>
+                    <option value="">Select a user to add\u2026</option>
                     {availableUsers.map((u) => (
                       <option key={u.id} value={u.id}>
-                        {u.full_name} — {u.email} ({u.role})
+                        {u.full_name} \u2014 {u.email} ({u.role})
                       </option>
                     ))}
                   </select>
@@ -273,7 +268,7 @@ export default function BoardSelector({ boards, userId, onSelect, onRefresh, onL
                           onClick={() => removeMemberFromSelection(m.userId)}
                           style={styles.removeMemberBtn}
                         >
-                          ×
+                          \u00d7
                         </button>
                       </div>
                     ))}
@@ -284,7 +279,7 @@ export default function BoardSelector({ boards, userId, onSelect, onRefresh, onL
               <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20 }}>
                 <button onClick={() => setCreating(false)} style={styles.ghostBtn}>Cancel</button>
                 <button onClick={handleCreate} disabled={!name.trim() || loading} style={styles.primaryBtn}>
-                  {loading ? "Creating…" : "Create Board"}
+                  {loading ? "Creating\u2026" : "Create Board"}
                 </button>
               </div>
             </div>
@@ -319,7 +314,7 @@ export default function BoardSelector({ boards, userId, onSelect, onRefresh, onL
               <div style={styles.fieldWrap}>
                 <label style={styles.label}>Icon</label>
                 <div style={{ display: "flex", gap: 8 }}>
-                  {["📋", "🎯", "📢", "💰", "🏠", "⚙️", "🚀", "📊"].map((e) => (
+                  {["\ud83d\udccb", "\ud83c\udfaf", "\ud83d\udce2", "\ud83d\udcb0", "\ud83c\udfe0", "\u2699\ufe0f", "\ud83d\ude80", "\ud83d\udcca"].map((e) => (
                     <button
                       key={e}
                       onClick={() => setEditingBoard({ ...editingBoard, emoji: e })}
@@ -338,7 +333,7 @@ export default function BoardSelector({ boards, userId, onSelect, onRefresh, onL
               <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20 }}>
                 <button onClick={() => setEditingBoard(null)} style={styles.ghostBtn}>Cancel</button>
                 <button onClick={handleEditBoard} disabled={!editingBoard.name.trim() || loading} style={styles.primaryBtn}>
-                  {loading ? "Saving…" : "Save Changes"}
+                  {loading ? "Saving\u2026" : "Save Changes"}
                 </button>
               </div>
             </div>
@@ -369,7 +364,7 @@ function SettingsDropdown({ board, onEdit, onDelete, onClose }) {
         onMouseEnter={(e) => (e.target.style.background = "var(--surface2)")}
         onMouseLeave={(e) => (e.target.style.background = "transparent")}
       >
-        ✏️ &nbsp;Edit Board
+        \u270f\ufe0f &nbsp;Edit Board
       </button>
       <div style={{ height: 1, background: "var(--border)", margin: "4px 0" }} />
       <button
@@ -378,24 +373,13 @@ function SettingsDropdown({ board, onEdit, onDelete, onClose }) {
         onMouseEnter={(e) => (e.target.style.background = "rgba(239,68,68,0.08)")}
         onMouseLeave={(e) => (e.target.style.background = "transparent")}
       >
-        🗑️ &nbsp;Delete Board
+        \ud83d\uddd1\ufe0f &nbsp;Delete Board
       </button>
     </div>
   );
 }
 
 const styles = {
-  hubLink: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 6,
-    fontSize: 13,
-    color: "var(--text-dim)",
-    textDecoration: "none",
-    marginBottom: 20,
-    fontFamily: "'DM Sans', sans-serif",
-    transition: "color 0.15s",
-  },
   container: { minHeight: "100vh", background: "var(--bg)", padding: "40px 24px" },
   inner: { maxWidth: 900, margin: "0 auto" },
   header: {
@@ -600,7 +584,7 @@ const styles = {
   },
   primaryBtn: {
     background: "var(--accent)",
-    color: "#000",
+    color: "#fff",
     border: "none",
     borderRadius: 8,
     padding: "8px 18px",

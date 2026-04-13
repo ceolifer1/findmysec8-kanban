@@ -370,16 +370,16 @@ function ResetPasswordModal({ user, onClose, onSaved, onError }) {
 
 /* ── Styles ── */
 const backBtn = { background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 8, padding: "6px 14px", color: "var(--text-dim)", fontSize: 12, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" };
-const primaryBtn = { background: "var(--accent)", color: "#000", border: "none", borderRadius: 8, padding: "10px 20px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" };
+const primaryBtn = { background: "var(--accent)", color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" };
 const ghostBtn = { background: "var(--surface2)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" };
 const dangerBtn = { background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", borderRadius: 8, width: 32, height: 32, fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', sans-serif" };
 const actionBtn = { background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 8, width: 32, height: 32, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', sans-serif" };
 const userRow = { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, gap: 12 };
-const avatar = { width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: "#000", flexShrink: 0 };
+const avatar = { width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: "#fff", flexShrink: 0 };
 const selectStyle = { background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 6, padding: "5px 10px", color: "var(--text)", fontSize: 12, fontFamily: "'DM Sans', sans-serif", outline: "none" };
 const roleBadge = (role) => ({
   fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 6, textTransform: "uppercase", letterSpacing: "0.04em",
-  background: role === "superadmin" ? "rgba(212,148,58,0.15)" : role === "admin" ? "rgba(139,92,246,0.15)" : "var(--surface2)",
+  background: role === "superadmin" ? "rgba(59,130,246,0.15)" : role === "admin" ? "rgba(139,92,246,0.15)" : "var(--surface2)",
   color: role === "superadmin" ? "var(--accent)" : role === "admin" ? "#8b5cf6" : "var(--text-dim)",
 });
 const errorBox = { background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 16 };
