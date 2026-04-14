@@ -96,6 +96,9 @@ export async function updateProfile(userId, updates) {
   return data;
 }
 
+/* ─────────────────  WORKSPACE  ───────────────── */
+const WORKSPACE_ID = import.meta.env.VITE_WORKSPACE_ID || "default";
+
 /* ─────────────────  BOARDS  ───────────────── */
 export async function getBoards(userId) {
   // Step 1: Get board memberships
@@ -106,12 +109,13 @@ export async function getBoards(userId) {
   if (memErr) throw memErr;
   if (!memberships || memberships.length === 0) return [];
 
-  // Step 2: Fetch the actual boards
+  // Step 2: Fetch boards filtered by workspace
   const boardIds = memberships.map((m) => m.board_id);
   const { data: boards, error: boardErr } = await supabase
     .from("boards")
-    .select("id, name, description, emoji, created_at, owner_id")
-    .in("id", boardIds);
+    .select("id, name, description, emoji, created_at, owner_id, workspace")
+    .in("id", boardIds)
+    .eq("workspace", WORKSPACE_ID);
   if (boardErr) throw boardErr;
 
   // Step 3: Merge
@@ -124,7 +128,7 @@ export async function getBoards(userId) {
 export async function createBoard(name, description, emoji, ownerId) {
   const { data, error } = await supabase
     .from("boards")
-    .insert({ name, description, emoji, owner_id: ownerId })
+    .insert({ name, description, emoji, owner_id: ownerId, workspace: WORKSPACE_ID })
     .select()
     .single();
   if (error) throw error;

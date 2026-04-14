@@ -100,6 +100,13 @@ export default function BoardSelector({ boards, userId, onSelect, onRefresh, onL
   return (
     <div style={styles.container}>
       <div style={styles.inner}>
+        {/* Breadcrumb */}
+        <div style={{ marginBottom: 20 }}>
+          <a href="https://ceolifer1.github.io/kanban-hub/" style={{ color: "var(--text-dim)", fontSize: 13, textDecoration: "none", fontWeight: 500 }}>
+            ← Back to Workspaces
+          </a>
+        </div>
+
         {/* Header */}
         <div style={styles.header}>
           <div>
