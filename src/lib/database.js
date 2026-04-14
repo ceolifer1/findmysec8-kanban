@@ -184,7 +184,7 @@ export async function getBoardMembers(boardId) {
 export async function addBoardMember(boardId, userId, role = "member") {
   const { error } = await supabase
     .from("board_members")
-    .insert({ board_id: boardId, user_id: userId, role });
+    .upsert({ board_id: boardId, user_id: userId, role }, { onConflict: "board_id,user_id" });
   if (error) throw error;
 }
 
